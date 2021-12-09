@@ -3,9 +3,11 @@ import { Typography, List, ListItemButton, ListItem,
 } from '@mui/material'
 import { ArrowForwardIos } from '@mui/icons-material'
 import BottomNavigationBar from '../components/bottomNavigationBar'
-import { Link } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback } from 'react'
 import TopBar from '../components/topBar'
+import CheckAuth from '../components/api/authorized'
+
 
 function refreshCustomers() {
     const getRandomInt = (max) => Math.floor(Math.random() * Math.floor(max));
@@ -16,13 +18,25 @@ function refreshCustomers() {
   }
 
 function UserCustomers() {
-
-    const [value, setValue] = useState(0);
+    const navigate = useNavigate()
     const [messages, setMessages] = useState(() => refreshCustomers());
+
+    const authed = useCallback(async() =>{
+        const auth = await CheckAuth()
+        if(auth === false){
+            navigate('/login')
+        }
+        else{
+        }
+    }, [navigate])
+    
+    useEffect(() => {
+        authed()
+    }, [authed])
 
     useEffect(() => {
         setMessages(refreshCustomers());
-    }, [value, setMessages]);
+    }, [setMessages]);
 
     return(
         <div>

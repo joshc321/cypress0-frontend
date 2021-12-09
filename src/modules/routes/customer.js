@@ -4,51 +4,19 @@ import { Box,Typography, List, ListItemText,
  } from '@mui/material'
 import { ArrowForwardIos,
         PinDrop, Event, LocalAtm, Notes, Note,
-        Phone, Email, Add
+        Phone, Add
  } from '@mui/icons-material'
 import BottomNavigationBar from '../components/bottomNavigationBar'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import TopBar from '../components/topBar'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import  QrCode  from 'react-qr-code'
 import * as svg from 'save-svg-as-png'
-import Cookies from 'js-cookie'
-
-function mapsSelector(search) {
-    let searchEncode = encodeURIComponent(search)
-    if /* if we're on iOS, open in Apple Maps */
-      ((navigator.userAgent.indexOf("iPhone") !== -1) || 
-       (navigator.userAgent.indexOf("iPod") !== -1) || 
-       (navigator.userAgent.indexOf("iPad") !== -1))
-      window.open(`maps://maps.google.com/maps/search/?daddr=${searchEncode}`);
-  
-    else /* else use Google */
-      window.open(`https://maps.google.com/maps/search/?api=1&query=${searchEncode}`);
-  }
-
-async function getCustomer(id='') {
-    const requestOptions = {
-        method: 'GET',
-        mode: 'cors',
-        headers: { 
-            'Authorization': 'Bearer ' + Cookies.get('access_token')
-         },
-    };
-    const response = await fetch(`/api/customers/${id}`, requestOptions)
-    return response.json()
-}
-
-async function getServiceRecords(records=''){
-    const requestOptions = {
-        method: 'GET',
-        mode: 'cors',
-        headers: { 
-            'Authorization': 'Bearer ' + Cookies.get('access_token'),
-         },
-    };
-    const response = await fetch(`/api/services/s?${records}`, requestOptions)
-    return response.json()
-}
+import GetCustomer from '../components/api/getCustomer'
+import GetServiceRecords from '../components/api/getServiceRecords'
+import MapsSelector from '../components/api/mapsSelector'
+import CreateFullAddress from '../components/helpers/createFullAddress'
+import ToStrDate from '../components/helpers/toStringDate'
 
 function Customer(){
     const navigate = useNavigate();
@@ -56,48 +24,38 @@ function Customer(){
     slug = slug.substring(1);
     const [showQR, setShowQR] = useState(false)
     const [customer, setCustomer] = useState({})
-    const [services, setServices] = useState({})
+    const [services, setServices] = useState([])
+    const [address, setAddress] = useState('')
     const [date, setDate] = useState('')
     const downloadQR = () => {
         svg.saveSvgAsPng(document.getElementById("12345"), "qrcode.png");
       };
 
-    
-    useEffect(() => {
-        async function getCust() {
-            const cust = await getCustomer(slug)
-            let serviceQuery = '';
-            for(let i = 0; i < cust.serviceRecords.length; i++){
-                serviceQuery = serviceQuery.concat('&id=', cust.serviceRecords[i]['$oid'])
-            }
-            const serv = await getServiceRecords(serviceQuery)
-            setCustomer(cust)
-            setServices(serv)
-        }
-        getCust();
-    }, [])
-
-    function formatAMPM(date) {
-        var hours = date.getHours();
-        var minutes = date.getMinutes();
-        var ampm = hours >= 12 ? 'pm' : 'am';
-        hours = hours % 12;
-        hours = hours ? hours : 12; // the hour '0' should be '12'
-        minutes = minutes < 10 ? '0'+minutes : minutes;
-        var strTime = hours + ':' + minutes + ' ' + ampm;
-        return strTime;
-      }
-
-    const toStrDate = (date) => {
-        if(date){
-            console.log(Date(date['$date']).toLocaleString())
-            console.log(new Date(date['$date']).toLocaleString())
-            return new Date(date['$date']).toLocaleString()
+      const getCust = useCallback(async() =>{
+        const cust = await GetCustomer(slug)
+        if(cust['status'] === 403){
+            navigate('/login')
         }
         else{
-            return 'No Date'
+        let serviceQuery = '';
+        for(let i = 0; i < cust.serviceRecords.length; i++){
+            serviceQuery = serviceQuery.concat('&id=', cust.serviceRecords[i]['$oid'])
         }
+        let serv = []
+        if(cust.serviceRecords.length > 0){
+            serv = await GetServiceRecords(serviceQuery)
+        }
+        //console.log(cust)
+        setCustomer(cust)
+        setServices(serv)
+        setAddress(CreateFullAddress(cust))
     }
+    }, [navigate, slug])
+
+    useEffect(() => {
+        getCust();
+    }, [getCust])
+
 
     useEffect(() => {
         if(customer.date_created){
@@ -130,14 +88,14 @@ function Customer(){
             </Backdrop>
             <Box sx={{pt: 0, pb: 8}}>
                 <List>
-                    <ListItem sx={{ p: 0}} onClick={() => mapsSelector(customer.address)}> 
+                    <ListItem sx={{ p: 0}} onClick={() => MapsSelector(address)}> 
                         <ListItemButton>
                             <ListItemIcon>
                                 <PinDrop />
                                 <ListItemText 
                                     primary={
                                         <div>
-                                            <Typography sx={{ maxWidth: 300,  pl:1 ,fontFamily: 'Proxima Nova Alt', fontWeight: "fontWeightThin", fontSize: 13 }}>{customer.address}</Typography>
+                                            <Typography sx={{ maxWidth: 300,  pl:1 ,fontFamily: 'Proxima Nova Alt', fontWeight: "fontWeightThin", fontSize: 13 }}>{address}</Typography>
                                         </div>
                                     }/>
                             </ListItemIcon>
@@ -150,17 +108,6 @@ function Customer(){
                                 primary={
                                     <div>
                                         <Typography sx={{ maxWidth: 300, pl:1 ,fontFamily: 'Proxima Nova Alt', fontWeight: "fontWeightThin", fontSize: 13 }}>{customer.phone}</Typography>
-                                    </div>
-                                }/>
-                        </ListItemIcon>
-                    </ListItem>
-                    <ListItem> 
-                        <ListItemIcon>
-                            <Email />
-                            <ListItemText 
-                                primary={
-                                    <div>
-                                        <Typography sx={{ maxWidth: 300, pl:1 ,fontFamily: 'Proxima Nova Alt', fontWeight: "fontWeightThin", fontSize: 13 }}>{customer.email}</Typography>
                                     </div>
                                 }/>
                         </ListItemIcon>
@@ -211,14 +158,13 @@ function Customer(){
                     <List>
                         {services.map(({ service, notes, price, date, _id }, index) => (
                         <div key={index}>
-                        {console.log(_id['$oid'], date)}
                         <ListItem key={_id} sx={{p: 0}}>
                             <ListItemButton component={Link} to={`/logs/:${_id['$oid']}`}>
                                 <Event color="secondary"/>
                                 <ListItemText 
                                     primary={
                                         <div>
-                                        <Typography sx={{pl: 1, fontFamily: 'Proxima Nova Alt', fontWeight: "fontWeightThin", fontSize: 13 }}>{toStrDate(date)}</Typography>
+                                        <Typography sx={{pl: 1, fontFamily: 'Proxima Nova Alt', fontWeight: "fontWeightThin", fontSize: 13 }}>{ToStrDate(date)}</Typography>
                                         </div>
                                     }/>
                                 <ArrowForwardIos />

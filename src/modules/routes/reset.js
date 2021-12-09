@@ -4,12 +4,13 @@ import AppForm from "../components/AppForm"
 import { Stack } from "@mui/material"
 import PasswordTextField from "../components/passwordTextField"
 import MainButton from "../components/mainbutton"
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import PostResetPassword from "../components/api/postResetPassword"
 
 function Reset(){
 
     const navigate = useNavigate()
-
+    let { slug } = useParams();
     const [error, setError] = useState(false);
     const [password, setPassword] = useState('');
 
@@ -27,6 +28,10 @@ function Reset(){
 
         if(password.length >= 6){
             console.log(password)
+            PostResetPassword({
+                reset_token: slug,
+                password: password
+            })
             navigate('/login')
         }
     };

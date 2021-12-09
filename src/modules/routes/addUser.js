@@ -6,14 +6,17 @@ import { ArrowBackIosNew
 import AppForm from '../components/AppForm';
 import PasswordTextField from '../components/passwordTextField';
 import BottomNavigationBar from '../components/bottomNavigationBar';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import MainButton from '../components/mainbutton';
 import { useNavigate } from 'react-router-dom';
+import PostUser from '../components/api/postUser';
+import CheckAuth from '../components/api/authorized';
 
 function AddUser() {
 
     const navigate = useNavigate();
 
+    const [errorText, setErrorText] = useState("Please input required fields")
     const [error, setError] = useState(false);
     const [values, setValues] = useState({
         first: '',
@@ -24,22 +27,40 @@ function AddUser() {
         password: '',
       });
     
+      const authed = useCallback(async() =>{
+        const auth = await CheckAuth()
+        if(auth === false){
+            navigate('/login')
+        }
+        else{
+        }
+    }, [navigate])
+    
+    useEffect(() => {
+        authed()
+    }, [authed])
 
       const handleChange = (prop) => (event) => {
         setValues({ ...values, [prop]: event.target.value });
       };
 
 
-      const handleSubmit = (e) => {
+      const handleSubmit = async e => {
         e.preventDefault()
         setError(false)
-        
+        setErrorText('Please input required fields')
         if(values.email === '' || values.password === '' || values.last === '' || values.first === ''){
             setError(true)
         }
 
         if(values.email && values.password && values.last && values.first){
-            console.log(values);
+            //console.log(values);
+            const result = await PostUser(values)
+            if(result.status === 400){
+                setErrorText(result.message)
+                setError(true)
+            }
+            //console.log(result)
         }
       }
 
@@ -106,7 +127,7 @@ function AddUser() {
                             value={values.company}
                             onChange={handleChange('company')}
                         />
-                        <PasswordTextField error={error} message={"Please input required fields"} password={values.password} handleChange={handleChange('password')}/>
+                        <PasswordTextField error={error} message={errorText} password={values.password} handleChange={handleChange('password')}/>
                         <MainButton text={"Create"} />
                     </Stack>
                 </form>

@@ -13,83 +13,76 @@ import {
   IconButton,
   Divider,
   Fab,
+  Grid,
 } from "@mui/material";
 import { ArrowForwardIos, Search, Add } from "@mui/icons-material";
 import BottomNavigationBar from "../components/bottomNavigationBar";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import InfiniteScroll from "react-infinite-scroll-component";
-import Cookies from 'js-cookie'
-
-
-function refreshCustomers() {
-  const getRandomInt = (max) => Math.floor(Math.random() * Math.floor(max));
-
-  return Array.from(new Array(50)).map(
-    () => customerExamples[getRandomInt(customerExamples.length)]
-  );
-}
-
-async function getUsers(start='', end='') {
-    const requestOptions = {
-        method: 'GET',
-        mode: 'cors',
-        headers: { 
-            'Authorization': 'Bearer ' + Cookies.get('access_token')
-         },
-    };
-    const response = await fetch(`/api/customers?s=${start}&e=${end}`, requestOptions)
-    return response.json()
-}
+import GetCustomers from '../components/api/getCustomers';
+import SearchCustomers from "../components/api/search";
 
 function Home() {
   const navigation = useNavigate();
+  const loadAmount = 10;
 
   //api
   const [users, setUsers] = useState([])
   const [startVal, setStartVal] = useState(0)
   //
 
-  const [messages, setMessages] = useState(() => refreshCustomers());
 
   const [hasMore, setMore] = useState(true);
   const [search, setSearch] = useState("");
   const [searchVal, setSearchVal] = useState("");
   
+  const handleCustomers = useCallback(async() =>{
+    setStartVal(0)
+    setMore(true);
+    if(searchVal.trim() === ''){
+      const data = await GetCustomers(0, loadAmount)
+        if(data['status'] === 403){
+          navigation('/login')
+        }
+        else{
+        setStartVal(loadAmount)
+        //console.log(data)
+        setUsers(data)
+      }
+    }
+    else{
+      const data = await SearchCustomers(searchVal)
+      setUsers(data)
+      setMore(false)
+    }
+  },[navigation, searchVal])
 
   const handleChange = (e) => {
     setSearch(e.target.value);
   };
 
   const getMore = async() => {
-    let newUsers = await getUsers(startVal, startVal+10);
-    if(newUsers.length == 0){
+    let newUsers = await GetCustomers(startVal, startVal+loadAmount);
+    if(newUsers.length === 0){
         setMore(false);
         return;
     }
-    setStartVal(startVal+10)
+    setStartVal(startVal+loadAmount)
     setUsers([...users, ...newUsers]);
   };
 
-  useEffect(async() => {
-      let user = await getUsers(startVal, startVal+10)
-      setStartVal(startVal+10)
-      console.log(user)
-      setUsers(user)
-  }, [])
+  useEffect(() =>{
+    handleCustomers()
+  }, [searchVal, handleCustomers])
 
-
-  useEffect(() => {
-    setMessages(refreshCustomers());
-    console.log(users)
-  }, [searchVal, setMessages]);
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     setSearchVal(search);
-    console.log(search);
+    //console.log(search);
   };
+
   return (
     <div key={"main div"}>
       <Paper
@@ -137,7 +130,14 @@ function Home() {
           dataLength={users.length}
           next={getMore}
           hasMore={hasMore}
-          loader={<h4>Loading...</h4>}
+          loader={
+            <Grid container
+              spacing={0}
+              alignItems="center"
+              justifyContent="center">
+                Loading...
+            </Grid>
+          }
           endMessage={
             <p style={{ textAlign: "center" }}>
               <b>No more cutomers</b>
@@ -145,7 +145,7 @@ function Home() {
           }
         >
           <List>
-            {users.map(({ first, phone, address, _id }, index) => (
+            {users.map(({ first, last, phone, address, city, state, _id }, index) => (
             
               <div key={index + _id['$oid']}>
                 <ListItem key={index + _id + "list item al"} sx={{ p: 0 }}>
@@ -176,7 +176,7 @@ function Home() {
                               fontSize: 18,
                             }}
                           >
-                            {first}
+                            {first} {last}
                           </Typography>
                         </div>
                       }
@@ -189,7 +189,7 @@ function Home() {
                             fontSize: 13,
                           }}
                         >
-                          {address}
+                          {`${address}, ${city}, ${state}`}
                         </Typography>
                       }
                     />
@@ -220,24 +220,3 @@ function Home() {
 }
 
 export default Home;
-
-const customerExamples = [
-  {
-    id: "2341234",
-    name: "Joe Dirt",
-    phone: "902 873 4721",
-    address: "Hemet CA",
-  },
-  {
-    id: "2342342",
-    name: "Abrial Dias",
-    phone: "823 876 1234",
-    address: "Western, CA",
-  },
-  {
-    id: "927381",
-    name: "Azikil Dirt",
-    phone: "093 234 1293",
-    address: "joe mamas houe",
-  },
-];

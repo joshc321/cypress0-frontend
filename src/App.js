@@ -16,6 +16,7 @@ import EditCustomer from './modules/routes/editCustomer';
 import CreateCustomer from './modules/routes/createCustomer';
 import NewService from './modules/routes/newService';
 import Scan from './modules/routes/scan';
+import NotFound from './modules/routes/notFound'
 
 function App() {
   return (
@@ -24,7 +25,7 @@ function App() {
         <Route path ="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot" element={<Forgot />} />
-        <Route path="/reset" element={<Reset />} />
+        <Route path="/reset/:slug" element={<Reset />} />
         <Route path="/adduser" element={<AddUser />} />
         <Route path="/account" element={<Account />} />
         <Route path="/edit-account" element={<EditAccount />} />
@@ -36,7 +37,7 @@ function App() {
         <Route path="/create-customer" element={<CreateCustomer />} />
         <Route path="/new-service/:slug" element={<NewService />} />
         <Route path="/scan" element={<Scan />} />
-
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );

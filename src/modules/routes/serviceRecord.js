@@ -6,53 +6,90 @@ import { ArrowForwardIos,
         PinDrop, Event, LocalAtm, Notes, Note
  } from '@mui/icons-material'
 import BottomNavigationBar from '../components/bottomNavigationBar'
-import { Link, useParams } from 'react-router-dom'
+import { useState, useEffect, useCallback } from 'react'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import TopBar from '../components/topBar'
-
-function mapsSelector(search) {
-    let searchEncode = encodeURIComponent(search)
-    if /* if we're on iOS, open in Apple Maps */
-      ((navigator.userAgent.indexOf("iPhone") !== -1) || 
-       (navigator.userAgent.indexOf("iPod") !== -1) || 
-       (navigator.userAgent.indexOf("iPad") !== -1))
-      window.open(`maps://maps.google.com/maps/search/?daddr=${searchEncode}`);
-  
-    else /* else use Google */
-      window.open(`https://maps.google.com/maps/search/?api=1&query=${searchEncode}`);
-  }
+import MapsSelector from '../components/api/mapsSelector'
+import GetServiceRecords from '../components/api/getServiceRecords'
+import CreateFullAddress from '../components/helpers/createFullAddress'
+import ToStrDate from '../components/helpers/toStringDate'
+import GetCustomer from '../components/api/getCustomer'
+import CheckAuth from '../components/api/authorized'
 
 function ServiceRecord(){
     let { slug } = useParams(); 
     slug = slug.substring(1);
-    const result = serviceExamples.find( ({ id }) => id === slug );
+    const navigate = useNavigate()
+    const [service, setService] = useState({})
+    const [address, setAddress] = useState('')
+    const [customer, setCusomter] = useState({})
+    const [customerId, setCustomerId] = useState('')
+    const [error, setError] = useState(false)
+
+    const authed = useCallback(async() =>{
+        const auth = await CheckAuth()
+        if(auth === false){
+            navigate('/login')
+        }
+        else{
+        }
+    },[navigate])
     
+    useEffect(() => {
+        authed()
+    }, [authed])
+
+    const getData = useCallback(async() =>{
+        const serviceId = `id=${slug}`
+        const data = await GetServiceRecords(serviceId)
+        try{
+            const serv = data[0]
+            const custId = serv['customer']['$oid']
+            const cust = await GetCustomer(custId)
+            setCustomerId(custId)
+            setCusomter(cust)
+            setService(serv)
+            //console.log(serv)
+            setAddress(CreateFullAddress(serv))
+        }
+        catch (error){
+            setError(true)
+        }
+    },[slug])
+
+    useEffect(() => {
+        getData();
+    }, [getData])
 
     return(
         <div>
-            <TopBar primary="Service Record" secondary="Information"/>
+            <TopBar primary="Service Record" secondary={!error ? "Information" : "Service Not Found"}/>
+            
+            
             <Box sx={{pt: 25, pb: 8}}>
+            {!error ?
                 <List>
                     <ListItem sx={{p: 0}}>
-                        <ListItemButton component={Link} to={`/customer/:${result.custid}`}>
+                        <ListItemButton component={Link} to={`/customer/:${customerId}`}>
                             <ListItemText 
                                 primary={
                                     <div>
                                     <Typography sx={{ fontFamily: 'Proxima Nova Alt', fontWeight: "fontWeightThin", fontSize: 13 }}>Customer</Typography>
-                                    <Typography sx={{ fontFamily: 'Proxima Nova Alt', fontWeight: "fontWeightBold", fontSize: 18 }}>{result.name}</Typography>
+                                    <Typography sx={{ fontFamily: 'Proxima Nova Alt', fontWeight: "fontWeightBold", fontSize: 18 }}>{customer.first + ' ' +customer.last}</Typography>
                                     </div>
                                 }/>
                             <ArrowForwardIos />
                         </ListItemButton>    
                     </ListItem>
                     <Divider sx={{ mt: 1,borderBottomWidth: 3 }}/>
-                    <ListItem sx={{p: 0}} onClick={() => mapsSelector(result.address)}>
+                    <ListItem sx={{p: 0}} onClick={() => MapsSelector(address)}>
                         <ListItemButton> 
                         <ListItemIcon>
                             <PinDrop />
                             <ListItemText 
                                 primary={
                                     <div>
-                                        <Typography sx={{ maxWidth: 300, minWidth: 200, pl:1 ,fontFamily: 'Proxima Nova Alt', fontWeight: "fontWeightThin", fontSize: 13 }}>{result.address}</Typography>
+                                        <Typography sx={{ maxWidth: 300, minWidth: 200, pl:1 ,fontFamily: 'Proxima Nova Alt', fontWeight: "fontWeightThin", fontSize: 13 }}>{address}</Typography>
                                     </div>
                                 }/>
                         </ListItemIcon>
@@ -64,7 +101,7 @@ function ServiceRecord(){
                             <ListItemText 
                                 primary={
                                     <div>
-                                        <Typography sx={{ maxWidth: 300, minWidth: 200, pl:1 ,fontFamily: 'Proxima Nova Alt', fontWeight: "fontWeightThin", fontSize: 13 }}>{result.date}</Typography>
+                                        <Typography sx={{ maxWidth: 300, minWidth: 200, pl:1 ,fontFamily: 'Proxima Nova Alt', fontWeight: "fontWeightThin", fontSize: 13 }}>{ToStrDate(service.date)}</Typography>
                                     </div>
                                 }/>
                         </ListItemIcon>
@@ -75,7 +112,7 @@ function ServiceRecord(){
                             <ListItemText 
                                 primary={
                                     <div>
-                                        <Typography sx={{ maxWidth: 300, minWidth: 200, pl:1 ,fontFamily: 'Proxima Nova Alt', fontWeight: "fontWeightThin", fontSize: 13 }}>${result.cost}</Typography>
+                                        <Typography sx={{ maxWidth: 300, minWidth: 200, pl:1 ,fontFamily: 'Proxima Nova Alt', fontWeight: "fontWeightThin", fontSize: 13 }}>{service.price ? '$ '+service.price : 'No Price'}</Typography>
                                     </div>
                                 }/>
                         </ListItemIcon>
@@ -87,7 +124,7 @@ function ServiceRecord(){
                             <ListItemText 
                                 primary={
                                     <div>
-                                        <Typography sx={{ maxWidth: 300, pl:1 ,fontFamily: 'Proxima Nova Alt', fontWeight: "fontWeightThin", fontSize: 13 }}>{result.description}</Typography>
+                                        <Typography sx={{ maxWidth: 300, pl:1 ,fontFamily: 'Proxima Nova Alt', fontWeight: "fontWeightThin", fontSize: 13 }}>{service.service}</Typography>
                                     </div>
                                 }/>
                         </ListItemIcon>
@@ -98,13 +135,15 @@ function ServiceRecord(){
                             <ListItemText 
                                 primary={
                                     <div>
-                                        <Typography sx={{ maxWidth: 300, pl:1 ,fontFamily: 'Proxima Nova Alt', fontWeight: "fontWeightThin", fontSize: 13 }}>{result.notes}</Typography>
+                                        <Typography sx={{ maxWidth: 300, pl:1 ,fontFamily: 'Proxima Nova Alt', fontWeight: "fontWeightThin", fontSize: 13 }}>{service.notes}</Typography>
                                     </div>
                                 }/>
                         </ListItemIcon>
                     </ListItem>
                     <Divider sx={{ mt: 1,borderBottomWidth: 3 }}/>
                 </List>
+            : ''
+            }   
             </Box>
 
             <BottomNavigationBar />
@@ -113,37 +152,3 @@ function ServiceRecord(){
 }
 
 export default ServiceRecord;
-
-const serviceExamples = [
-    {
-      id: '9367812',
-      name: 'Joe Dirt',
-      description: "I'll be in the neighbourhood this week. Let's grab a bite to eat",
-      date: 'December 17, 1995',
-      address: '1123 South State Street, Hemet, California 92543, United States',
-      cost: '23.32',
-      notes: 'did some things you kmow',
-      custid: '2341234'
-    },
-    {
-      id: '9367193',
-      name: 'Abrial Dias',
-      description: `Do you have a suggestion for a good present for John on his work
-        anniversary. I am really confused & would love your thoughts on it.`,
-      date: 'June 3, 2003',
-      address: '1123 South State Street, Hemet, California 92543, United States',
-      cost: '2.32',
-      notes: 'did some tings you kmow',
-      custid: '2342342'
-    },
-    {
-        id: '8103651',
-        name: 'Azikil Dirt',
-        description: "doingDi some oteha sdufa",
-        date: 'December 17, 3002',
-        address: '2983 Yo mama way Bazin, California 92543, United States',
-      cost: '23.32',
-      notes: 'did some things you kmow',
-      custid: '927381',
-    },
-  ];

@@ -4,41 +4,64 @@ import { IconButton, Box, Typography,
 import { ArrowBackIosNew } from '@mui/icons-material';
 import MainButton from '../components/mainbutton';
 import BottomNavigationBar from '../components/bottomNavigationBar';
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import AppForm from '../components/AppForm';
 import { useNavigate, useParams } from 'react-router-dom';
- 
-
+import GetCustomer from '../components/api/getCustomer';
+import UpdateCustomer from '../components/api/updateCustomer';
+import CheckAuth from '../components/api/authorized';
 
 function EditCustomer() {
-
     let { slug } = useParams(); 
     slug = slug.substring(1);
 
     const navigate = useNavigate();
 
-
     const [error, setError] = useState(false);
     const [values, setValues] = useState({
-        first: 'Some',
-        last: 'Customer',
-        phone: '951 123 421',
-        address: '1932 candine way',
-        city: 'ligma',
-        state: 'suga',
-        zip: '23492',
-        system: 'this some system stuff',
-        notes: 'ye ye woa balls',
-        slug: slug,
+        first: '',
+        last: '',
+        phone: '',
+        address: '',
+        city: '',
+        state: '',
+        zip: '',
+        system: '',
+        notes: '',
       });
-    
 
+      const getCust = useCallback(async() =>{
+        const authed = await CheckAuth();
+        if(authed === false){
+            navigate('/login')
+        }
+        else{
+            const cust = await GetCustomer(slug)
+            //console.log(cust)
+            const defaultValues = {
+                first: cust.first || '',
+                last: cust.last || '',
+                phone: cust.phone || '',
+                address: cust.address || '',
+                city: cust.city || '',
+                state: cust.state || '',
+                zip: cust.zip || '',
+                system: cust.system || '',
+                notes: cust.notes || '',
+            }
+            setValues(defaultValues)
+        }
+    }, [navigate, slug])
+    useEffect(() =>{
+        getCust();
+    }, [getCust])
+    
       const handleChange = (prop) => (event) => {
         setValues({ ...values, [prop]: event.target.value });
       };
 
 
-      const handleSubmit = (e) => {
+      const handleSubmit = async e => {
         e.preventDefault()
         setError(false)
         
@@ -47,7 +70,9 @@ function EditCustomer() {
         }
 
         if(values.last && values.first && values.phone && values.address){
-            console.log(values);
+            //console.log(values);
+            UpdateCustomer(values, slug)
+            navigate(-1)
         }
       }
 

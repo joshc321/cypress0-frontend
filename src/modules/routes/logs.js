@@ -3,10 +3,10 @@ import { Box,Typography, List, ListItemText,
  } from '@mui/material'
 import { ArrowForwardIos } from '@mui/icons-material'
 import BottomNavigationBar from '../components/bottomNavigationBar'
-import { Link } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback } from 'react'
 import TopBar from '../components/topBar'
-
+import CheckAuth from '../components/api/authorized'
 
 function refreshMessages() {
     const getRandomInt = (max) => Math.floor(Math.random() * Math.floor(max));
@@ -17,13 +17,25 @@ function refreshMessages() {
   }
 
 function Logs() {
-    const [value, setValue] = useState(0);
     const [messages, setMessages] = useState(() => refreshMessages());
-
+    const navigate = useNavigate()
     useEffect(() => {
         setMessages(refreshMessages());
-    }, [value, setMessages]);
+    }, [setMessages]);
     
+    const authed = useCallback(async() =>{
+        const auth = await CheckAuth()
+        if(auth === false){
+            navigate('/login')
+        }
+        else{
+        }
+    },[navigate])
+    
+    useEffect(() => {
+        authed()
+    }, [authed])
+
 
     return (
         <Box>

@@ -10,17 +10,8 @@ import PasswordTextField from '../components/passwordTextField';
 import MainButton from '../components/mainbutton'
 import { useNavigate } from 'react-router-dom'
 import Cookies from 'js-cookie'
+import PostLogin from '../components/api/postLogin'
 
-async function postLogin(data={}) {
-    const requestOptions = {
-        method: 'POST',
-        mode: 'cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    };
-    const response = await fetch('/api/auth/login', requestOptions)
-    return response.json()
-}
 
 function Login(){
 
@@ -54,19 +45,24 @@ function Login(){
         }
 
         if(values.email && values.password){
-            console.log(values);
-            const data = await postLogin({ email: values.email, password: values.password })
+            //console.log(values);
+            const data = await PostLogin({ email: values.email, password: values.password })
             if(data['status']){
                 setError(true)
-                console.log(data['message'])
+                //console.log(data['message'])
             }
             else if(data['token']){
-                console.log(data['token'])
-                Cookies.set('access_token', data['token'])
+                //console.log(data['token'])
+                if(data.checked){
+                    Cookies.set('access_token', data['token'], { expires: 7 })
+                }
+                else{
+                    Cookies.set('access_token', data['token'])
+                }
                 navigate('/')
             }
             else{
-                console.log(data)
+                //console.log(data)
             }
         }
       }

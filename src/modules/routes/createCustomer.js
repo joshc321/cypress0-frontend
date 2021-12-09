@@ -4,24 +4,11 @@ import { IconButton, Box, Typography,
 import { ArrowBackIosNew } from '@mui/icons-material';
 import MainButton from '../components/mainbutton';
 import BottomNavigationBar from '../components/bottomNavigationBar';
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import AppForm from '../components/AppForm';
 import { useNavigate } from 'react-router-dom';
-import Cookies from 'js-cookie' 
-
-async function postCustomer(data={}) {
-    const requestOptions = {
-        method: 'POST',
-        mode: 'cors',
-        headers: { 
-            'Authorization': 'Bearer ' + Cookies.get('access_token'),
-            'Content-Type': 'application/json'
-         },
-        body: JSON.stringify(data)
-    };
-    const response = await fetch('/api/customers', requestOptions)
-    return response.json()
-}
+import PostCustomer from '../components/api/postCustomer'
+import CheckAuth from '../components/api/authorized';
 
 function CreateCustomer() {
 
@@ -40,7 +27,19 @@ function CreateCustomer() {
         system: '',
         notes: '',
       });
+      
+      const authed = useCallback(async() =>{
+        const auth = await CheckAuth()
+        if(auth === false){
+            navigate('/login')
+        }
+        else{
+        }
+    }, [navigate])
     
+    useEffect(() => {
+        authed()
+    }, [authed])
 
       const handleChange = (prop) => (event) => {
         setValues({ ...values, [prop]: event.target.value });
@@ -56,8 +55,8 @@ function CreateCustomer() {
         }
 
         if(values.last && values.first && values.phone && values.address){
-            const data = await postCustomer(values)
-            console.log(values, data['id']);
+            const data = await PostCustomer(values)
+            //console.log(values, data['id']);
             navigate(`/customer/:${data['id']}`)
         }
       }

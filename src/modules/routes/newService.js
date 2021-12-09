@@ -5,24 +5,11 @@ import { IconButton, Box, Typography,
 import { ArrowBackIosNew } from '@mui/icons-material';
 import MainButton from '../components/mainbutton';
 import BottomNavigationBar from '../components/bottomNavigationBar';
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import AppForm from '../components/AppForm';
 import { useNavigate, useParams } from 'react-router-dom';
- import Cookies from 'js-cookie'
-
-async function newService(data={}, id='') {
-    const requestOptions = {
-        method: 'POST',
-        mode: 'cors',
-        headers: { 
-            'Authorization': 'Bearer ' + Cookies.get('access_token'),
-            'Content-Type': 'application/json'
-         },
-        body: JSON.stringify(data)
-    };
-    const response = await fetch(`/api/services/${id}`, requestOptions)
-    return response.json()
-}
+import PostService from '../components/api/postService'
+import CheckAuth from '../components/api/authorized';
 
 function NewService() {
 
@@ -53,7 +40,18 @@ function NewService() {
         let stringDate = `${parsedYear}-${parsedMonth}-${parseDay}T${parseHour}:${parseMin}`
         return stringDate
     }
-    //console.log(stringDate);
+    const authed = useCallback(async() =>{
+        const auth = await CheckAuth()
+        if(auth === false){
+            navigate('/login')
+        }
+        else{
+        }
+    },[navigate])
+    
+    useEffect(() => {
+        authed()
+    }, [authed])
 
     const [values, setValues] = useState({
         date: Date.now(), 
@@ -82,10 +80,6 @@ function NewService() {
 
       const handleSubmit = async e => {
         e.preventDefault()
-        //console.log(new Date(values.date).toISOString())
-        //console.log(values.date)
-        //let date = new Date(values.date).toISOString()
-        //console.log(now_utc)
         const data = {
             date: new Date(values.date).toISOString(),
             address: values.address,
@@ -97,11 +91,11 @@ function NewService() {
             bill: values.bill,
             price: values.price,
         }
-        console.log(values.date)
-        console.log(data.date)
-        const result = await newService(data, slug)
-        //console.log(values, data);
-        //navigate(-1);
+        //console.log(values.date)
+        //console.log(data.date)
+        await PostService(data, slug)
+        //console.log(result);
+        navigate(-1);
         //navigate(`/services/s?id=${data['id']}`)
       }
 

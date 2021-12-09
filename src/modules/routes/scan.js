@@ -1,11 +1,12 @@
 import { Grid, Fab } from '@mui/material'
 import { Add } from '@mui/icons-material'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import BottomNavigationBar from "../components/bottomNavigationBar"
 import QrReader from 'react-qr-reader'
 import useWindowDimensions from '../components/useWindowDimensions'
 import { useNavigate } from 'react-router-dom'
 import disableScroll from 'disable-scroll';
+import CheckAuth from '../components/api/authorized'
 //import QrReader from 'react-qr-scanner'
 
 function Scan(){
@@ -16,9 +17,19 @@ function Scan(){
     let frame = (height < width) ? width: height;
     const qrRef = useRef(null);
     
+    const authed = useCallback(async() =>{
+        const auth = await CheckAuth()
+        if(auth === false){
+            navigate('/login')
+        }
+    },[navigate])
+
+    useEffect(() =>{
+        authed()
+    }, [authed])
+
     useEffect(() => {
         disableScroll.on()
-
         return function cleanup(){
             disableScroll.off()
         }
@@ -29,7 +40,7 @@ function Scan(){
             if (data.startsWith('cypr:')){
                 navigate(`/customer/:${data.replace('cypr:', '')}`)
             }
-            console.log(data)
+            //console.log(data)
         }
     }
 

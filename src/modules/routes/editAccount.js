@@ -4,17 +4,18 @@ import { IconButton, Box, Typography,
 import { ArrowBackIosNew } from '@mui/icons-material';
 import MainButton from '../components/mainbutton';
 import BottomNavigationBar from '../components/bottomNavigationBar';
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import AppForm from '../components/AppForm';
 import { useNavigate } from 'react-router-dom';
- 
-
+import CheckAuth from '../components/api/authorized'
+import GetUser from '../components/api/getUser';
+import UpdateUser from '../components/api/updateUser';
 
 function EditAccount() {
 
     const navigate = useNavigate();
 
-
+    const [userId, setUserId] = useState('')
     const [error, setError] = useState(false);
     const [values, setValues] = useState({
         first: 'Joshua',
@@ -24,6 +25,29 @@ function EditAccount() {
         company: 'cypress',
       });
     
+      const authed = useCallback(async() =>{
+        const auth = await CheckAuth()
+        if(auth === false){
+            navigate('/login')
+        }
+        else{
+            const data = await GetUser()
+            setUserId(data._id.$oid)
+            const defaultValues = {
+                first: data.first || '',
+                last: data.last || '',
+                email: data.email || '',
+                role: data.role || '',
+                company: data.company || ''
+            }
+            setValues(defaultValues)
+        }
+    }, [navigate])
+    
+    useEffect(() => {
+        authed()
+    }, [authed])
+
 
       const handleChange = (prop) => (event) => {
         setValues({ ...values, [prop]: event.target.value });
@@ -39,7 +63,9 @@ function EditAccount() {
         }
 
         if(values.email && values.last && values.first){
-            console.log(values);
+            //console.log(values)
+            UpdateUser(values, userId)
+            navigate(-1)
         }
       }
 

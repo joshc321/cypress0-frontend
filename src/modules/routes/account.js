@@ -1,25 +1,42 @@
 import { Box,Typography, List, ListItemText,
-        ListItemButton, Paper, ListItem, Divider } from '@mui/material'
+        ListItemButton, ListItem, Divider } from '@mui/material'
 import { ArrowForwardIos } from '@mui/icons-material'
 import BottomNavigationBar from '../components/bottomNavigationBar'
-import { Link } from 'react-router-dom'
+import TopBarLarge from '../components/topBarLarge'
+import { Link, useNavigate } from 'react-router-dom'
+import Cookies from 'js-cookie'
+import CheckAuth from '../components/api/authorized'
+import { useState, useEffect, useCallback } from 'react'
+import GetUser from '../components/api/getUser'
 
 function Account(){
-    const name = 'Joshua Cordero'
+    const navigate = useNavigate();
+    const [user, setUser] = useState({})
+
+    const authed = useCallback(async() =>{
+        const auth = await CheckAuth()
+        if(auth === false){
+            navigate('/login')
+        }
+        else{
+            const data = await GetUser()
+            //console.log(data)
+            setUser(data)
+        }
+    }, [navigate])
+    
+    useEffect(() => {
+        authed()
+    }, [authed])
+
+    const logout = () =>{
+        Cookies.remove('access_token')
+        navigate('/login')
+    }
 
     return(
         <Box sx={{pb: 10}}>
-            <Paper square={true} sx={{
-                backgroundColor: 'secondary.dark',
-                height: 223,
-                }}
-            >
-                <Box sx={{ pt: 6 }}>
-                <Typography fontWeight="fontWeightBold" variant="h1" color="white" align="center">Cypress</Typography>
-                <Typography sx={{ pt: 1 }}fontWeight="fontWeightSemibold" variant="h6" color="white" align="center">{name}</Typography>
-                </Box>
-
-            </Paper>
+            <TopBarLarge primary={"Cypress"} secondary={user.first + ' ' +user.last}/>
             <Box>
                 <nav aria-label="main user actions">
                     <List>
@@ -64,7 +81,7 @@ function Account(){
                         </ListItem>
                         <Divider />
                         <ListItem sx={{p: 0}} >
-                            <ListItemButton component={Link} to="/login" sx={{ height: 75}}>
+                            <ListItemButton onClick={logout} sx={{ height: 75}}>
                                 <ListItemText primary={
                                     <Typography fontWeight="fontWeightBold" variant="body1" color="error.dark">Logout</Typography>
                                 }

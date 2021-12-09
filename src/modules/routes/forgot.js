@@ -4,6 +4,7 @@ import AppForm from "../components/AppForm"
 import { TextField, Stack } from "@mui/material"
 import MainButton from "../components/mainbutton"
 import { useNavigate } from 'react-router-dom'
+import PostForgot from "../components/api/postForgot"
 
 function Forgot(){
 
@@ -25,7 +26,7 @@ function Forgot(){
         }
 
         if(email){
-            console.log(email)
+            PostForgot({email: email})
             navigate('/login')
         }
     }
